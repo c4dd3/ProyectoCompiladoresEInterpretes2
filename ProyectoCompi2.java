@@ -1,8 +1,8 @@
 import java.util.Scanner;
-import scanner.MainScanner;
 import parser.MainParser;
+import scanner.MainScanner;
 
-public class ProyectoCompi1 {
+public class ProyectoCompi2 {
     public static void main(String[] args) {
         Scanner input = new Scanner(System.in);
 

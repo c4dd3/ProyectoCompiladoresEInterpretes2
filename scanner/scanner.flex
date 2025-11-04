@@ -1,123 +1,234 @@
-/* ================================== Sección 1: User code ================================== */
 package scanner;
 
-/* ===== Corte de sección ===== */
-%%
+import java_cup.runtime.Symbol;
+import parser.sym;
 
-/* ================================== Sección 2: Opciones + Macros ================================== */
+%%
+%public
 %class Scanner
 %unicode
-%public
+%cup
 %line
 %column
 %ignorecase
-%type int
 
+%{
+  private Symbol sym(int type) {
+    return new Symbol(type, yyline+1, yycolumn+1);
+  }
+  private Symbol sym(int type, Object val) {
+    return new Symbol(type, yyline+1, yycolumn+1, val);
+  }
+%}
 
-/* --- Básicos --- */
-DIGITO            = [0-9]                               // dígito
-LETRA             = [A-Za-z]                            // letra (mayúscula o minúscula)
+/* =============================== MACROS (sin {n,m}) =============================== */
 
-/* --- Identificadores y espacios --- */
-IDENTIFICADOR     = {LETRA}({LETRA}|{DIGITO}){0,126}    // identificador: letra seguida de letras/dígitos, hasta 127 caracteres
-ESPACIOS          = [ \t\r\n]+                          // espacios en blanco (espacio, tab, retorno de carro, nueva línea)
+/* espacios */
+ESPACIOS              = [ \t\f\r\n]+
 
-/* Identificador inválido (más de 127 caracteres) */
-IDENTIFICADOR_INVALIDO = {LETRA}({LETRA}|{DIGITO}){127}({LETRA}|{DIGITO})+    // identificador inválido: más de 127 caracteres
+/* básicos */
+DIGITO                = [0-9]
+LETRA                 = [A-Za-z]
 
-/* --- Comentarios (no anidados) --- */
-COM_LLAVES        = \{[^}]*\}                   /*  { ... }      */
-COM_PAREST        = \(\*([^*]|\*+[^)])*\*+\)    /*  (* ... *)    */
+/* identificadores (longitud se valida en la acción) */
+ID_BASE               = {LETRA}({LETRA}|{DIGITO})*
 
-/* --- Literales numéricos --- */
-HEX               = 0[xX][0-9a-fA-F]+           // hexadecimal (0xFF, 0X1A, ...)
-OCT               = 0[0-7]+                     // octal (0, 07, 077, ...)
-ENTERO_DEC        = [1-9][0-9]*|0               // decimal (0, 1, 2, ..., sin ceros a la izquierda)
-REAL_BASICO       = {DIGITO}+\.{DIGITO}+        // parte entera y decimal (1.0, 0.5, etc.)
-EXP               = [eE][+-]?{DIGITO}+          // exprentación científica (E10, e-5, etc.)
-REAL              = {REAL_BASICO}({EXP})?       // real con parte entera y decimal, opcionalmente con exponente (3.0, 0.5E10, 1.5e-4, etc.)
+/* símbolo ilegal dentro de identificador (algo no permitido entre letras/dígitos) */
+SIMBOLO_ILEGAL        = [^A-Za-z0-9 \t\r\n\+\-\*\/,;\(\)\[\]:\.\^=<>\"\'\{\}]
+ID_CON_SIM_ILLEGAL    = {LETRA}({LETRA}|{DIGITO})*{SIMBOLO_ILEGAL}({LETRA}|{DIGITO})*
 
-/* Reales inválidos (punto líder o punto cola) */
-ERROR_REAL_PUNTO_LIDER = \.{DIGITO}+({EXP})?    // punto líder (ej: .5, .123E10, etc.)
-ERROR_REAL_PUNTO_COLA  = {DIGITO}+\.({EXP})?    // punto cola (ej: 5., 123.E10, etc.)
+/* comentarios no anidados */
+COM_LLAVES            = \{[^}]*\}
+COM_PAREST            = \(\*([^*]|\*+[^)])*\*+\)
 
-/* --- Errores de literales numéricos --- */
-ID_TAIL        = {LETRA}({LETRA}|{DIGITO})*         // cola de identificador (letras/dígitos)
-NUM_DEC_E      = {ENTERO_DEC}({EXP})?               // número decimal con posible exponente (123, 0, 456E10, 789e-5, etc.)
-NUM_ANY        = ({HEX}|{OCT}|{REAL}|{NUM_DEC_E})   // cualquier número (hex, octal, real, decimal con exponente)
-ERROR_NUM_SEGUIDO_TEXTO = {NUM_ANY}{ID_TAIL}        // número seguido de texto (ej: 123abc, 0x1G, 0778, 3.14pi, etc.)
+/* números (validación fina en acciones donde aplica) */
+HEX_CAND              = 0[xX][A-Za-z0-9]+
+OCT_CAND              = 0[0-9]+
+DEC_ENTERO            = 0|([1-9][0-9]*)
+EXP                   = [eE][+-]?{DIGITO}+
+REAL_PUNTO            = {DIGITO}+\.{DIGITO}+         /* exige dígito a ambos lados del punto */
+REAL                  = {REAL_PUNTO}({EXP})?
+NUM_DEC_E             = {DEC_ENTERO}{EXP}            /* 3e2, 5E+7 */
 
-/* Cualquier símbolo NO permitido dentro de un identificador (¡aquí cae ‘!’) */
-SIMBOLO_ILEGAL_EN_ID = [^A-Za-z0-9 \t\r\n\+\-\*\/,;\(\)\[\]:\.\^<>=]                    // símbolo ilegal en ID (cualquier cosa que no sea letra, dígito, espacio o símbolo permitido)
-ID_CON_SIMBOLO_ILEGAL = {LETRA}({LETRA}|{DIGITO})* ({SIMBOLO_ILEGAL_EN_ID}{ID_TAIL})+   // identificador con símbolo ilegal (ej: var!, id$, nombre@, etc.)
+/* errores específicos P1 para reales con punto suelto */
+ERROR_REAL_PUNTO_LIDER = \.{DIGITO}+({EXP})?
+ERROR_REAL_PUNTO_COLA  = {DIGITO}+\.({EXP})?
 
-/* --- Literales de texto --- */
-STRING            = \"([^\"\n])*\"              // string entre comillas dobles (1 sola línea)
-CHAR              = \'([^\'\n])\'               // carácter entre comillas simples (ej: 'A', '9', etc.)
+/* número seguido de cola de id: 123abc, 0xZ1k, 0789x, 1.2e+3foo, 3e2foo */
+ID_TAIL               = {LETRA}({LETRA}|{DIGITO})*
+NUM_SEGUIDO_TEXTO     = ({HEX_CAND}|{OCT_CAND}|{REAL}|{NUM_DEC_E}|{DEC_ENTERO}){ID_TAIL}
 
-/* Errores de literales sin cierre */
-STRING_INCOMP = \"[^\"\r\n]*                    // string sin cierre (hasta fin de línea o retorno de carro)
-CHAR_INCOMP   = \'[^\'\r\n]*                    // char sin cierre (hasta fin de línea o retorno de carro)
+/* literales texto (no multilínea) */
+STRING                = \"([^\\\"\n]|\\.)*\"
+CHAR                  = \'([^\\\'\n]|\\.)\'
 
-/* --- Palabras que funcionan como OPERADORES (reportarlas como OPERADOR) --- */
-OPER_PALABRA      = AND|OR|NOT|DIV|MOD|IN|SHL|SHR
+/* incompletos (hasta fin de línea) */
+STRING_INCOMP         = \"[^\"\r\n]*
+CHAR_INCOMP           = \'[^\'\r\n]*
 
-/* --- Otras reservadas --- */
-RESERVADAS = ABSOLUTE|ARRAY|ASM|BEGIN|CASE|CONST|CONSTRUCTOR|DESTRUCTOR|EXTERNAL|DO|DOWNTO|ELSE|END|FILE|FOR|FORWARD|FUNCTION|GOTO|IF|IMPLEMENTATION|INLINE|INTERFACE|INTERRUPT|LABEL|NIL|OBJECT|OF|PACKED|PRIVATE|PROCEDURE|RECORD|REPEAT|SET|STRING|THEN|TO|TYPE|UNIT|UNTIL|USES|VAR|VIRTUAL|WHILE|WITH|XOR|AND|OR|NOT|DIV|MOD|IN|SHL|SHR|PROGRAM|READ|WRITE|INT|CHAR|REAL
+/* palabras operadoras del parser */
+OPER_PALABRA_PARSER   = AND|OR|NOT|DIV|MOD
+/* operadoras extra P1 (si las tenías), CUP las verá como IDENT */
+OPER_PALABRA_EXTRA    = IN|SHL|SHR
 
-/* --- Operadores y separadores simbólicos (poner largos primero) --- */
-OPER_SIMBOLO = \*\*|\+\+|\-\-|:=|<=|>=|<>|=|<|>|\+|\-|\*|\/|,|;|\(|\)|\[|\]|:|\.|\^
+/* reservadas del parser */
+RES_PARSER = PROGRAM|VAR|BEGIN|END|IF|THEN|ELSE|WHILE|DO|FOR|TO|FUNCTION|PROCEDURE|READ|WRITE|INT|CHAR|REAL|STRING
 
-/* (Opcional) Guardias de error numérico */
-OCT_INVALIDO      = 0[0-7]*[89]                         // octal inválido (ej: 09, 078, etc.)
-HEX_INVALIDO      = 0[xX][^0-9A-Fa-f][A-Za-z0-9]*       // hexadecimal inválido (ej: 0xG, 0x1Z, etc.)
+/* reservadas extra de P1 (no usadas por el parser; se reportan como reservada y se devuelven IDENT) */
+RES_P1_EXTRA = ABSOLUTE|ARRAY|ASM|CASE|CONST|CONSTRUCTOR|DESTRUCTOR|EXTERNAL|DOWNTO|EXIT|FILE|FORWARD|GOTO|INLINE|INTERFACE|LABEL|NIL|OBJECT|OF|PACKED|PRIVATE|PROTECTED|PUBLIC|PUBLISHED|RECORD|REPEAT|SET|TYPE|UNIT|UNTIL|USES|WITH
 
 %%
-/* ================================== Sección 3: Reglas léxicas ================================== */
 
-/* ===================== ESPACIOS & COMENTARIOS ===================== */
-{ESPACIOS}                  { /* ignore */ }
-{COM_LLAVES}                { /* ignore */ }
-{COM_PAREST}                { /* ignore */ }
+/* =============================== REGLAS (ordenado) =============================== */
 
-/* ===================== GUARDAS DE ERROR (ANTES DE TODO) ===================== */
-/* Reales inválidos: .5, .5e3, 5., 5.e-2 */
-{ERROR_REAL_PUNTO_LIDER}    { TokenCollector.addError("ERROR_LEXICO_REAL_PUNTO_LIDER", yytext(), yyline+1); }
-{ERROR_REAL_PUNTO_COLA}     { TokenCollector.addError("ERROR_LEXICO_REAL_PUNTO_COLA",  yytext(), yyline+1); }
+/* 1) Espacios y comentarios */
+{ESPACIOS}       { /* skip */ }
+{COM_LLAVES}     { /* skip */ }
+{COM_PAREST}     { /* skip */ }
 
-/* ===================== ERRORES DE NÚMEROS ===================== */
-{OCT_INVALIDO}              { TokenCollector.addError("ERROR_LEXICO_OCTAL_INVALIDO",     yytext(), yyline+1); }
-{HEX_INVALIDO}              { TokenCollector.addError("ERROR_LEXICO_HEXADECIMAL_INVALIDO", yytext(), yyline+1); }
+/* 2) Guardas de error de reales con punto suelto (P1) */
+{ERROR_REAL_PUNTO_LIDER}  { TokenCollector.addError("ERROR_REAL_PUNTO_LIDER", yytext(), yyline+1); }
+{ERROR_REAL_PUNTO_COLA}   { TokenCollector.addError("ERROR_REAL_PUNTO_COLA",  yytext(), yyline+1); }
 
-/* ===================== NÚMEROS VÁLIDOS (ORDEN ESPECÍFICO) ===================== */
-{HEX}                       { TokenCollector.add("LITERAL_HEX",    yytext(), yyline+1); }
-{OCT}                       { TokenCollector.add("LITERAL_OCTAL",  yytext(), yyline+1); }
-{REAL}                      { TokenCollector.add("LITERAL_REAL",   yytext(), yyline+1); }
-{ENTERO_DEC}                { TokenCollector.add("LITERAL_ENTERO", yytext(), yyline+1); }
+/* 3) NÚMEROS VÁLIDOS (en este orden) */
+/* 3.1) Real con punto y opcional exponente */
+{REAL} {
+  TokenCollector.add("LITERAL_REAL", yytext(), yyline+1);
+  return sym(sym.REAL_LIT, yytext());
+}
+/* 3.2) Entero con exponente (sin punto): 3e2, 5E+7 */
+{NUM_DEC_E} {
+  TokenCollector.add("LITERAL_REAL", yytext(), yyline+1);
+  return sym(sym.REAL_LIT, yytext());
+}
+/* 3.3) Hex y Oct candidatos con validación en acción */
+{HEX_CAND} {
+  String s = yytext();
+  if (s.matches("0[xX][0-9A-Fa-f]+")) {
+    TokenCollector.add("LITERAL_HEX", s, yyline+1);
+    return sym(sym.INT_LIT, s);
+  } else {
+    TokenCollector.addError("ERROR_HEX_INVALIDO", s, yyline+1);
+  }
+}
+{OCT_CAND} {
+  String s = yytext();
+  if (s.matches("0[0-7]+")) {
+    TokenCollector.add("LITERAL_OCTAL", s, yyline+1);
+    return sym(sym.INT_LIT, s);
+  } else {
+    TokenCollector.addError("ERROR_OCTAL_INVALIDO", s, yyline+1);
+  }
+}
+/* 3.4) Entero decimal */
+{DEC_ENTERO} {
+  TokenCollector.add("LITERAL_ENTERO", yytext(), yyline+1);
+  return sym(sym.INT_LIT, yytext());
+}
 
-/* Número válido seguido de letras/dígitos (p. ej. 1invalido, 0x1FZ, 3.2e5foo) */
-{ERROR_NUM_SEGUIDO_TEXTO}   { TokenCollector.addError("ERROR_LEXICO_NUM_SEGUIDO_POR_TEXTO", yytext(), yyline+1); }
+/* 4) Número seguido de texto (ERROR) */
+{NUM_SEGUIDO_TEXTO} {
+  TokenCollector.addError("ERROR_NUMERO_SEGUIDO_DE_TEXTO", yytext(), yyline+1);
+}
 
-/* ===== Literales de texto válidos ===== */
-{STRING}                    { TokenCollector.add("LITERAL_STRING", yytext(), yyline+1); }
-{CHAR}                      { TokenCollector.add("LITERAL_CHAR",   yytext(), yyline+1); }
+/* 5) Strings / Chars válidos */
+{STRING} {
+  TokenCollector.add("LITERAL_STRING", yytext(), yyline+1);
+  return sym(sym.STRING_LIT, yytext());
+}
+{CHAR} {
+  TokenCollector.add("LITERAL_CHAR", yytext(), yyline+1);
+  return sym(sym.CHAR_LIT, yytext());
+}
 
-/* ===== Errores de cierre de "" y '' ===== */
-{STRING_INCOMP} / \r?\n     { TokenCollector.addError("ERROR_STRING_SIN_CIERRE", yytext(), yyline+1); }
-{CHAR_INCOMP}   / \r?\n     { TokenCollector.addError("ERROR_CHAR_SIN_CIERRE",   yytext(), yyline+1); }
+/* 6) Incompletos (cuando llega fin de línea) */
+{STRING_INCOMP} / \r?\n { TokenCollector.addError("ERROR_STRING_SIN_CIERRE", yytext(), yyline+1); }
+{CHAR_INCOMP}   / \r?\n { TokenCollector.addError("ERROR_CHAR_SIN_CIERRE",   yytext(), yyline+1); }
 
-/* ===================== ERRORES DE IDENTIFICADORES ===================== */
-{ID_CON_SIMBOLO_ILEGAL}     { TokenCollector.addError("ERROR_IDENTIFICADOR_SIMBOLO_ILEGAL", yytext(), yyline+1); }
+/* 7) Identificador con símbolo ilegal en medio (ERROR) */
+{ID_CON_SIM_ILLEGAL} {
+  TokenCollector.addError("ERROR_IDENTIFICADOR_SIMBOLO_ILEGAL", yytext(), yyline+1);
+}
 
-/* ==================== Identificador inválido (más de 127 caracteres) ===================== */
-{IDENTIFICADOR_INVALIDO}    { TokenCollector.addError("ERROR_IDENTIFICADOR_LONGITUD", yytext(), yyline+1); }
+/* 8) Palabras operadoras del parser */
+"AND" { TokenCollector.add("OPERADOR", yytext(), yyline+1); return sym(sym.AND); }
+"OR"  { TokenCollector.add("OPERADOR", yytext(), yyline+1); return sym(sym.OR); }
+"NOT" { TokenCollector.add("OPERADOR", yytext(), yyline+1); return sym(sym.NOT); }
+"DIV" { TokenCollector.add("OPERADOR", yytext(), yyline+1); return sym(sym.DIV_KW); }
+"MOD" { TokenCollector.add("OPERADOR", yytext(), yyline+1); return sym(sym.MOD_KW); }
 
-/* ===================== OPERADORES / RESERVADAS / IDENTIFICADORES ===================== */
-{OPER_SIMBOLO}              { TokenCollector.add("OPERADOR", yytext(), yyline+1); }
-{OPER_PALABRA}              { TokenCollector.add("OPERADOR", yytext(), yyline+1); }
-{RESERVADAS}                { TokenCollector.add("PALABRA_RESERVADA", yytext(), yyline+1); }
-{IDENTIFICADOR}             { TokenCollector.add("IDENTIFICADOR", yytext(), yyline+1); }
+/* 9) Palabras operadoras extra de P1 (CUP las verá como IDENT) */
+{OPER_PALABRA_EXTRA} {
+  TokenCollector.add("OPERADOR", yytext(), yyline+1);
+  return sym(sym.IDENT, yytext());
+}
 
-/* ===================== CATCH-ALL & EOF ===================== */
-.                           { TokenCollector.addError("ERROR_LEXICO", yytext(), yyline+1); }
-<<EOF>>                     { return YYEOF; }
+/* 10) Reservadas del parser (todas antes que IDENT) */
+"PROGRAM"   { TokenCollector.add("PALABRA_RESERVADA", yytext(), yyline+1); return sym(sym.PROGRAM); }
+"VAR"       { TokenCollector.add("PALABRA_RESERVADA", yytext(), yyline+1); return sym(sym.VAR); }
+"BEGIN"     { TokenCollector.add("PALABRA_RESERVADA", yytext(), yyline+1); return sym(sym.BEGIN); }
+"END"       { TokenCollector.add("PALABRA_RESERVADA", yytext(), yyline+1); return sym(sym.END); }
+"IF"        { TokenCollector.add("PALABRA_RESERVADA", yytext(), yyline+1); return sym(sym.IF); }
+"THEN"      { TokenCollector.add("PALABRA_RESERVADA", yytext(), yyline+1); return sym(sym.THEN); }
+"ELSE"      { TokenCollector.add("PALABRA_RESERVADA", yytext(), yyline+1); return sym(sym.ELSE); }
+"WHILE"     { TokenCollector.add("PALABRA_RESERVADA", yytext(), yyline+1); return sym(sym.WHILE); }
+"DO"        { TokenCollector.add("PALABRA_RESERVADA", yytext(), yyline+1); return sym(sym.DO); }
+"FOR"       { TokenCollector.add("PALABRA_RESERVADA", yytext(), yyline+1); return sym(sym.FOR); }
+"TO"        { TokenCollector.add("PALABRA_RESERVADA", yytext(), yyline+1); return sym(sym.TO); }
+"FUNCTION"  { TokenCollector.add("PALABRA_RESERVADA", yytext(), yyline+1); return sym(sym.FUNCTION); }
+"PROCEDURE" { TokenCollector.add("PALABRA_RESERVADA", yytext(), yyline+1); return sym(sym.PROCEDURE); }
+"READ"      { TokenCollector.add("PALABRA_RESERVADA", yytext(), yyline+1); return sym(sym.READ); }
+"WRITE"     { TokenCollector.add("PALABRA_RESERVADA", yytext(), yyline+1); return sym(sym.WRITE); }
+"INT"       { TokenCollector.add("PALABRA_RESERVADA", yytext(), yyline+1); return sym(sym.INT); }
+"CHAR"      { TokenCollector.add("PALABRA_RESERVADA", yytext(), yyline+1); return sym(sym.CHAR); }
+"REAL"      { TokenCollector.add("PALABRA_RESERVADA", yytext(), yyline+1); return sym(sym.REAL); }
+"STRING"    { TokenCollector.add("PALABRA_RESERVADA", yytext(), yyline+1); return sym(sym.STRING); }
+
+/* 11) Reservadas extra de P1 → IDENT para CUP (pero se registran como reservada) */
+{RES_P1_EXTRA} {
+  TokenCollector.add("PALABRA_RESERVADA", yytext(), yyline+1);
+  return sym(sym.IDENT, yytext());
+}
+
+/* 12) Operadores y separadores SIMBÓLICOS (largos → cortos) */
+":=" { TokenCollector.add("OPERADOR", yytext(), yyline+1); return sym(sym.ASSIGN); }
+"++" { TokenCollector.add("OPERADOR", yytext(), yyline+1); return sym(sym.INCR); }
+"--" { TokenCollector.add("OPERADOR", yytext(), yyline+1); return sym(sym.DECR); }
+"**" { TokenCollector.add("OPERADOR", yytext(), yyline+1); return sym(sym.IDENT, yytext()); }  /* reporta pero CUP lo ignora */
+
+">=" { TokenCollector.add("OPERADOR", yytext(), yyline+1); return sym(sym.GE); }
+"<=" { TokenCollector.add("OPERADOR", yytext(), yyline+1); return sym(sym.LE); }
+"<>" { TokenCollector.add("OPERADOR", yytext(), yyline+1); return sym(sym.NE); }
+
+"+"  { TokenCollector.add("OPERADOR", yytext(), yyline+1); return sym(sym.PLUS); }
+"-"  { TokenCollector.add("OPERADOR", yytext(), yyline+1); return sym(sym.MINUS); }
+"*"  { TokenCollector.add("OPERADOR", yytext(), yyline+1); return sym(sym.TIMES); }
+"/"  { TokenCollector.add("OPERADOR", yytext(), yyline+1); return sym(sym.DIVIDE); }
+"="  { TokenCollector.add("OPERADOR", yytext(), yyline+1); return sym(sym.EQ); }
+">"  { TokenCollector.add("OPERADOR", yytext(), yyline+1); return sym(sym.GT); }
+"<"  { TokenCollector.add("OPERADOR", yytext(), yyline+1); return sym(sym.LT); }
+
+"("  { TokenCollector.add("SEPARADOR", yytext(), yyline+1); return sym(sym.LPAREN); }
+")"  { TokenCollector.add("SEPARADOR", yytext(), yyline+1); return sym(sym.RPAREN); }
+"["  { TokenCollector.add("SEPARADOR", yytext(), yyline+1); return sym(sym.LBRACK); }
+"]"  { TokenCollector.add("SEPARADOR", yytext(), yyline+1); return sym(sym.RBRACK); }
+","  { TokenCollector.add("SEPARADOR", yytext(), yyline+1); return sym(sym.COMMA); }
+";"  { TokenCollector.add("SEPARADOR", yytext(), yyline+1); return sym(sym.SEMI); }
+":"  { TokenCollector.add("SEPARADOR", yytext(), yyline+1); return sym(sym.COLON); }
+"."  { TokenCollector.add("SEPARADOR", yytext(), yyline+1); return sym(sym.DOT); }
+
+/* 13) Identificador válido (validación de longitud aquí) */
+{ID_BASE} {
+  String s = yytext();
+  if (s.length() > 127) {
+    TokenCollector.addError("ERROR_IDENTIFICADOR_LONGITUD", s, yyline+1);
+    return sym(sym.IDENT, s);  // sigue el flujo
+  } else {
+    TokenCollector.add("IDENTIFICADOR", s, yyline+1);
+    return sym(sym.IDENT, s);
+  }
+}
+
+/* 14) Catch-all y EOF */
+.      { TokenCollector.addError("ERROR_LEXICO", yytext(), yyline+1); }
+<<EOF>>{ return sym(sym.EOF); }

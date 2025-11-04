@@ -1,7 +1,8 @@
 VAR x, y : INTEGER;
-BEGIN
+(BEGIN)
   x := 5;
   y := x + 3.0E2;
   z := 'A';
   s := "hola";
 END
+( ( ( ( )))

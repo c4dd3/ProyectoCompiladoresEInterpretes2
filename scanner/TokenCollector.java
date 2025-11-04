@@ -1,143 +1,138 @@
 package scanner;
 
+import java.util.*;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.TreeMap;
+/**
+ * Colector simple para P1 y P2.
+ * - Mantiene todos los tokens y errores que registra el .flex (add / addError).
+ * - Expone métodos para limpiar e imprimir reportes (printSummary / printTokens / printErrors).
+ */
+public final class TokenCollector {
 
-public final class TokenCollector { // Define una clase final que no puede ser extendida
-
-    /* ====== Tipos auxiliares ====== */
-
-    private static final class TokenBucket {    // Clase interna para agrupar tokens iguales
-        final String tipo;                      // Tipo de token, por ejemplo "IDENTIFICADOR"
-        String displayLexema;                   // Primera forma escrita del token (para mostrar)
-        final TreeMap<Integer, Integer> lineCounts = new TreeMap<>(); // Mapea línea a cantidad de ocurrencias
-
-        TokenBucket(String tipo, String displayLexema) {    // Constructor
-            this.tipo = tipo;                               // Inicializa el tipo
-            this.displayLexema = displayLexema;             // Inicializa la forma escrita
+    // === Modelos internos ===
+    public static final class TokenEntry {
+        public final String tipo;   // p.ej. IDENTIFICADOR, LITERAL_ENTERO, OPERADOR, PALABRA_RESERVADA...
+        public final String lexema; // tal cual llega del .flex
+        public final int linea;     // 1-based
+        public TokenEntry(String tipo, String lexema, int linea) {
+        this.tipo = tipo; this.lexema = lexema; this.linea = linea;
         }
-
-        void addAtLine(int linea) {                         // Método para agregar una ocurrencia en una línea
-            lineCounts.merge(linea, 1, Integer::sum); // Suma 1 a la cuenta de esa línea
+    }
+    public static final class ErrorEntry {
+        public final String codigo; // p.ej. ERROR_HEX_INVALIDO
+        public final String lexema;
+        public final int linea;
+        public ErrorEntry(String codigo, String lexema, int linea) {
+        this.codigo = codigo; this.lexema = lexema; this.linea = linea;
         }
     }
 
-    private static final class LexError {   // Clase interna para representar errores léxicos
-        final String codigo;                // Código del error, por ejemplo "ERROR_LEXICO"
-        final String lexema;                // Lexema que causó el error
-        final int linea;                    // Línea donde ocurrió el error
+    // === Almacenamiento ===
+    private static final List<TokenEntry> TOKENS = new ArrayList<>();
+    private static final List<ErrorEntry> ERRORES = new ArrayList<>();
 
-        LexError(String codigo, String lexema, int linea) {     // Constructor
-            this.codigo = codigo; // Inicializa el código
-            this.lexema = lexema; // Inicializa el lexema
-            this.linea = linea;   // Inicializa la línea
-        }
+    // === API llamada por el .flex ===
+    public static void add(String tipo, String lexema, int linea) {
+        TOKENS.add(new TokenEntry(tipo, lexema, linea));
     }
-
-    /* ====== Estado ====== */
-
-    // key = tipo + "|" + lexemaNormalizado (en minúsculas si unifyCase es true)
-    private static final TreeMap<String, TokenBucket> TOKENS = new TreeMap<>();     // Mapa de tokens agrupados
-    private static final List<LexError> ERRORES = new ArrayList<>();                // Lista de errores léxicos
-
-    private static final Locale LOCALE = Locale.ROOT;   // Locale para normalizar el case
-
-    private static boolean unifyCase = true;            // Indica si se normaliza el case de los lexemas
-
-    private TokenCollector() { /* no instancias */ }    // Constructor privado para evitar instanciación
-
-    /* ====== API para el scanner ====== */
-
-    /** Agregar un token válido. */
-    public static void add(String tipo, String lexema, int linea) {                 // Método para agregar un token
-        if (lexema == null) return;                                                 // Si el lexema es nulo, no hace nada
-        final String norm = unifyCase ? lexema.toLowerCase(LOCALE) : lexema;        // Normaliza el lexema si corresponde
-        final String key = tipo + "|" + norm;                                       // Crea la clave para el mapa
-
-        TokenBucket bucket = TOKENS.get(key);               // Busca si ya existe ese token
-        if (bucket == null) {                               // Si no existe
-            bucket = new TokenBucket(tipo, lexema);         // Crea un nuevo TokenBucket con la forma escrita original
-            TOKENS.put(key, bucket);                        // Lo agrega al mapa de TOKENS
-        }
-        bucket.addAtLine(linea);                            // Agrega la línea al conteo de ocurrencias del token
-    }
-
-    /** Registrar un error léxico. */
     public static void addError(String codigo, String lexema, int linea) {
-        ERRORES.add(new LexError(codigo, lexema, linea));
+        ERRORES.add(new ErrorEntry(codigo, lexema, linea));
     }
 
-    /** Limpiar todo. */
+    // === Utilidades para el runner ===
     public static void reset() {
         TOKENS.clear();
         ERRORES.clear();
     }
 
-    /** Configurar si se unifica por mayúsculas/minúsculas. Por defecto: true. */
-    public static void setUnifyCase(boolean value) {
-        unifyCase = value;
-    }
+  /** Resumen corto: #tokens por tipo + #errores por código. */
+    public static void printSummary() {
+        System.out.println("=== RESUMEN ===");
 
-    /* ====== Salida ====== */
-
-    public static void printResults() {
-        // 1) Errores
-        System.out.println("=== ERRORES LEXICOS ===");
-        if (ERRORES.isEmpty()) {
-            System.out.println("(ninguno)");
+        Map<String, Integer> porTipo = new LinkedHashMap<>();
+        for (TokenEntry t : TOKENS) porTipo.merge(t.tipo, 1, Integer::sum);
+        if (porTipo.isEmpty()) {
+        System.out.println("(sin tokens)");
         } else {
-            for (LexError e : ERRORES) {
-                System.out.println("[" + e.codigo + "] '" + e.lexema + "' en línea " + e.linea);
-            }
+        System.out.println("-- TOKENS POR TIPO --");
+        porTipo.forEach((k,v)-> System.out.printf("%-20s : %d%n", k, v));
         }
 
-        // 2) Tokens
-        System.out.println("\n=== TOKENS ENCONTRADOS ===");
+        if (ERRORES.isEmpty()) {
+        System.out.println("\n-- ERRORES LEXICOS --\n(none)");
+        } else {
+        System.out.println("\n-- ERRORES LEXICOS --");
+        Map<String, Integer> porCodigo = new LinkedHashMap<>();
+        for (ErrorEntry e : ERRORES) porCodigo.merge(e.codigo, 1, Integer::sum);
+        porCodigo.forEach((k,v)-> System.out.printf("%-30s : %d%n", k, v));
+        }
+    }
+
+  /** Tabla estilo P1: Token | Tipo de Token | Línea(s). Agrupa por (lexema,tipo). */
+    public static void printTokens() {
+    System.out.println("=== TOKENS ENCONTRADOS ===");
         if (TOKENS.isEmpty()) {
             System.out.println("(ninguno)");
             return;
         }
 
-        // Reorganizamos para imprimir agrupado por tipo y luego por lexema mostrado
-        Map<String, List<TokenBucket>> porTipo = new TreeMap<>();
-        for (TokenBucket b : TOKENS.values()) {
-            porTipo.computeIfAbsent(b.tipo, k -> new ArrayList<>()).add(b);
-        }
-        for (List<TokenBucket> lista : porTipo.values()) {
-            // ordenar por displayLexema (case-insensitive pero estable)
-            lista.sort(Comparator.comparing(tb -> tb.displayLexema.toLowerCase(LOCALE)));
+        // Agrupa por (lexema, tipo) y acumula conteos por línea
+        Map<String, Group> mapa = new LinkedHashMap<>();
+        for (TokenEntry t : TOKENS) {
+            String key = t.lexema + "\u0001" + t.tipo;
+            mapa.computeIfAbsent(key, k -> new Group(t.lexema, t.tipo))
+                .addLinea(t.linea);
         }
 
-        // Encabezado al estilo del enunciado
-        System.out.printf("%-20s %-18s %s%n", "Token", "Tipo de Token", "Línea(s)");
+        // Cabecera
+        System.out.printf("%-16s %-18s %s%n", "Token", "Tipo de Token", "Línea(s)");
+        for (Group g : mapa.values()) {
+            System.out.printf("%-16s %-18s %s%n", g.lexema, g.tipo, g.lineasDetalladas());
+        }
+    }
+  /** Lista de errores con línea y lexema. */
+    public static void printErrors() {
+        System.out.println("=== ERRORES LEXICOS ===");
+        if (ERRORES.isEmpty()) {
+            System.out.println("(ninguno)");
+            return;
+        }
+        System.out.printf("%-30s %-8s %s%n", "Codigo", "Linea", "Lexema");
+        for (ErrorEntry e : ERRORES) {
+            System.out.printf("%-30s %-8d %s%n", e.codigo, e.linea, e.lexema);
+        }
+    }
 
-        for (Map.Entry<String, List<TokenBucket>> entry : porTipo.entrySet()) {
-            for (TokenBucket b : entry.getValue()) {
-                String lineas = formatLineCounts(b.lineCounts);
-                System.out.printf("%-20s %-18s %s%n", b.displayLexema, b.tipo, lineas);
+  // === Clase auxiliar para agrupación ===
+    private static final class Group {
+        final String lexema;
+        final String tipo;
+        // línea -> veces en esa línea
+        final java.util.TreeMap<Integer, Integer> porLinea = new java.util.TreeMap<>();
+
+        Group(String lexema, String tipo) {
+            this.lexema = lexema;
+            this.tipo = tipo;
+        }
+
+        void addLinea(int linea) {
+            porLinea.merge(linea, 1, Integer::sum);
+        }
+
+        // Construye:  "1, 3, 4(2), 8(4)"  (solo pone (n) si n>1)
+        String lineasDetalladas() {
+            StringBuilder sb = new StringBuilder();
+            boolean first = true;
+            for (java.util.Map.Entry<Integer, Integer> e : porLinea.entrySet()) {
+            if (!first) sb.append(", ");
+            first = false;
+            int linea = e.getKey();
+            int count = e.getValue();
+            if (count == 1) sb.append(linea);
+            else sb.append(linea).append("(").append(count).append(")");
             }
+            return sb.toString();
         }
     }
-
-    /* ====== Utilitarios ====== */
-
-    private static String formatLineCounts(TreeMap<Integer, Integer> counts) {
-        StringBuilder sb = new StringBuilder();
-        for (Map.Entry<Integer, Integer> e : counts.entrySet()) {
-            int line = e.getKey();
-            int c = e.getValue();
-            if (c == 1) sb.append(line);
-            else sb.append(line).append('(').append(c).append(')');
-            sb.append(", ");
-        }
-        if (sb.length() >= 2) sb.setLength(sb.length() - 2); // quitar ", "
-        return sb.toString();
-    }
-
 
 }
