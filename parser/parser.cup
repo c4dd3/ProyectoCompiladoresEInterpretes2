@@ -1,23 +1,34 @@
+// Importación de símbolos generados por el scanner
+import java_cup.runtime.Symbol;
+import parser.sym;
+
 // Declaración de precedencias y asociatividad de operadores
 precedence left OR, AND;
 precedence left EQ, NE, LT, GT, LE, GE;
 precedence left PLUS, MINUS;
 precedence left TIMES, DIVIDE, MOD_KW, DIV_KW;
 
-import java_cup.runtime.Symbol;
-import parser.sym;
 
+// Definir el programa principal
 program ::= PROGRAM IDENT globals_opt funcs_opt main_block {
-    System.out.println("Analizando programa: " + $2);
+    // Acción semántica: Crear un nodo AST o imprimir el nombre del programa
+    System.out.println("Analizando el programa: " + $2);
 };
 
+// Definir las variables globales
 globals_opt ::= /* vacío */ | VAR decl_list ;
 decl_list ::= decl_list decl | decl ;
 decl ::= IDENT_LIST ':' type ;
 type ::= INT | REAL | CHAR | STRING ;
 
+// Definir funciones y procedimientos
 funcs_opt ::= /* vacío */ | funcs_opt func_or_proc ;
 func_or_proc ::= function | procedure ;
 
 function ::= FUNCTION IDENT '(' param_list_opt ')' ':' type BEGIN local_decls_opt stmt_list ret_stmt END ;
 procedure ::= PROCEDURE IDENT '(' param_list_opt ')' BEGIN local_decls_opt stmt_list END ;
+
+// Bloque principal del programa
+main_block ::= BEGIN stmt_list END ;
+stmt_list ::= stmt_list stmt | stmt ;
+stmt ::= assign | call_stmt | if_stmt | while_stmt | for_stmt ;
