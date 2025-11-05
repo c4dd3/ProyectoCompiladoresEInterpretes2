@@ -3,3 +3,10 @@ precedence left OR, AND;
 precedence left EQ, NE, LT, GT, LE, GE;
 precedence left PLUS, MINUS;
 precedence left TIMES, DIVIDE, MOD_KW, DIV_KW;
+
+import java_cup.runtime.Symbol;
+import parser.sym;
+
+program ::= PROGRAM IDENT globals_opt funcs_opt main_block {
+    System.out.println("Analizando programa: " + $2);
+};
