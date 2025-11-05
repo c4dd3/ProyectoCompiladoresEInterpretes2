@@ -15,3 +15,9 @@ globals_opt ::= /* vacío */ | VAR decl_list ;
 decl_list ::= decl_list decl | decl ;
 decl ::= IDENT_LIST ':' type ;
 type ::= INT | REAL | CHAR | STRING ;
+
+funcs_opt ::= /* vacío */ | funcs_opt func_or_proc ;
+func_or_proc ::= function | procedure ;
+
+function ::= FUNCTION IDENT '(' param_list_opt ')' ':' type BEGIN local_decls_opt stmt_list ret_stmt END ;
+procedure ::= PROCEDURE IDENT '(' param_list_opt ')' BEGIN local_decls_opt stmt_list END ;
