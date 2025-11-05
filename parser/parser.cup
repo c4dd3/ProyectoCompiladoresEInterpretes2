@@ -10,3 +10,8 @@ import parser.sym;
 program ::= PROGRAM IDENT globals_opt funcs_opt main_block {
     System.out.println("Analizando programa: " + $2);
 };
+
+globals_opt ::= /* vacío */ | VAR decl_list ;
+decl_list ::= decl_list decl | decl ;
+decl ::= IDENT_LIST ':' type ;
+type ::= INT | REAL | CHAR | STRING ;
