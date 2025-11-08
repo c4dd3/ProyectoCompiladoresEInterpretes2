@@ -1,0 +1,78 @@
+// Importación de símbolos generados por el scanner
+import java_cup.runtime.Symbol;
+import parser.sym;
+
+// Declaración de precedencias y asociatividad de operadores
+precedence left OR, AND;
+precedence left EQ, NE, LT, GT, LE, GE;
+precedence left PLUS, MINUS;
+precedence left TIMES, DIVIDE, MOD_KW, DIV_KW;
+
+
+// Definir el programa principal
+program ::= PROGRAM IDENT globals_opt funcs_opt main_block {
+    // Acción semántica: Crear un nodo AST o imprimir el nombre del programa
+    System.out.println("Analizando el programa: " + $2);
+};
+
+// Definir las variables globales
+globals_opt ::= /* vacío */ | VAR decl_list ;
+decl_list ::= decl_list decl | decl ;
+decl ::= IDENT_LIST ':' type ;
+type ::= INT | REAL | CHAR | STRING ;
+
+// Definir funciones y procedimientos
+funcs_opt ::= /* vacío */ | funcs_opt func_or_proc ;
+func_or_proc ::= function | procedure ;
+
+function ::= FUNCTION IDENT '(' param_list_opt ')' ':' type BEGIN local_decls_opt stmt_list ret_stmt END ;
+procedure ::= PROCEDURE IDENT '(' param_list_opt ')' BEGIN local_decls_opt stmt_list END ;
+
+// Bloque principal del programa
+main_block ::= BEGIN stmt_list END ;
+stmt_list ::= stmt_list stmt | stmt ;
+stmt ::= assign | call_stmt | if_stmt | while_stmt | for_stmt ;
+
+// Asignación
+assign ::= IDENT ASSIGN expr ;
+call_stmt ::= IDENT '(' arg_list_opt ')' ;
+
+// Expresiones
+expr ::= expr PLUS expr
+       | expr MINUS expr
+       | expr TIMES expr
+       | expr DIVIDE expr
+       | IDENT ;
+
+// Expresiones booleanas
+bool_expr ::= NOT bool_expr
+            | bool_expr AND bool_expr
+            | bool_expr OR bool_expr
+            | expr EQ expr
+            | expr NE expr
+            | expr LT expr
+            | expr LE expr
+            | expr GT expr
+            | expr GE expr ;
+
+// Declaraciones de parámetros
+param_list_opt ::= /* vacío */ | param_list ;
+param_list ::= param_list ',' param | param ;
+param ::= IDENT ':' type ;
+ret_stmt ::= RETURN expr ;
+
+// Sentencias de control
+if_stmt ::= IF bool_expr THEN stmt_list else_opt END ;
+else_opt ::= ELSE stmt_list | /* vacío */ ;
+while_stmt ::= WHILE bool_expr DO stmt_list END ;
+for_stmt ::= FOR IDENT ASSIGN expr TO expr DO stmt_list END ;
+
+// Definir la acción semántica para las asignaciones
+assign_action ::= {
+    // Aquí se puede agregar lógica para manejar la semántica de asignaciones si es necesario
+};
+
+// Definir las expresiones booleanas y la semántica asociada
+bool_expr_action ::= {
+    // Lógica para las expresiones booleanas si es necesario
+};
