@@ -183,6 +183,7 @@ RES_P1_EXTRA = ABSOLUTE|ARRAY|ASM|CASE|CONST|CONSTRUCTOR|DESTRUCTOR|EXTERNAL|DOW
 "CHAR"      { TokenCollector.add("PALABRA_RESERVADA", yytext(), yyline+1); return sym(sym.CHAR); }
 "REAL"      { TokenCollector.add("PALABRA_RESERVADA", yytext(), yyline+1); return sym(sym.REAL); }
 "STRING"    { TokenCollector.add("PALABRA_RESERVADA", yytext(), yyline+1); return sym(sym.STRING); }
+"RETURN"    { TokenCollector.add("PALABRA_RESERVADA", yytext(), yyline+1); return sym(sym.RETURN); }
 
 /* 11) Reservadas extra de P1 → IDENT para CUP (pero se registran como reservada) */
 {RES_P1_EXTRA} {

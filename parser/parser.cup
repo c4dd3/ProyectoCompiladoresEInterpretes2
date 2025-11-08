@@ -1,50 +1,139 @@
-// Importación de símbolos generados por el scanner
-import java_cup.runtime.Symbol;
-import parser.sym;
+import java_cup.runtime.*;
 
-// Declaración de precedencias y asociatividad de operadores
-precedence left OR, AND;
-precedence left EQ, NE, LT, GT, LE, GE;
+parser code {: 
+    public void report_error(String message, Object info) {
+        System.err.println("Error sintactico: " + message);
+    }
+    
+    public void syntax_error(Symbol cur_token) {
+        report_error("Syntax error", cur_token);
+    }
+:}
+
+/* TERMINALES */
+terminal PROGRAM, VAR, FUNCTION, PROCEDURE, BEGIN, END, RETURN;
+terminal IF, THEN, ELSE, WHILE, DO, FOR, TO, NOT, AND, OR;
+terminal PLUS, MINUS, TIMES, DIVIDE, MOD, DIV;
+terminal EQ, NE, LT, GT, LE, GE, ASSIGN;
+terminal INT, REAL, CHAR, STRING;
+terminal LPAREN, RPAREN, LBRACK, RBRACK, COMMA, SEMI, COLON, DOT;
+terminal INCR, DECR;
+terminal READ, WRITE;
+terminal String IDENT;
+terminal String INT_LIT, REAL_LIT, CHAR_LIT, STRING_LIT;
+
+/* NO TERMINALES*/
+non terminal program, globals_opt, decl_list, decl, type;
+non terminal funcs_opt, func_or_proc, function, procedure;
+non terminal main_block, stmt_list, stmt;
+non terminal assign, call_stmt, expr, bool_expr;
+non terminal param_list_opt, param_list, param, ret_stmt;
+non terminal else_opt, while_stmt, for_stmt;
+non terminal ident_list, arg_list_opt, arg_list;
+non terminal local_decls_opt, if_stmt;
+
+/* PRECEDENCIAS */
+precedence left OR;
+precedence left AND;
+precedence left NOT;
+precedence left EQ, NE;
+precedence left LT, GT, LE, GE;
 precedence left PLUS, MINUS;
-precedence left TIMES, DIVIDE, MOD_KW, DIV_KW;
+precedence left TIMES, DIVIDE, MOD, DIV;
 
+/* PROGRAMA */
+program ::= PROGRAM IDENT globals_opt funcs_opt main_block DOT;
 
-// Definir el programa principal
-program ::= PROGRAM IDENT globals_opt funcs_opt main_block {
-    // Acción semántica: Crear un nodo AST o imprimir el nombre del programa
-    System.out.println("Analizando el programa: " + $2);
-};
+/* VARIABLES */
+globals_opt ::= 
+                | VAR decl_list
+;
 
-// Definir las variables globales
-globals_opt ::= /* vacío */ | VAR decl_list ;
-decl_list ::= decl_list decl | decl ;
-decl ::= IDENT_LIST ':' type ;
-type ::= INT | REAL | CHAR | STRING ;
+decl_list ::= decl
+            | decl_list decl
+;
 
-// Definir funciones y procedimientos
-funcs_opt ::= /* vacío */ | funcs_opt func_or_proc ;
-func_or_proc ::= function | procedure ;
+decl ::= ident_list COLON type SEMI;
 
-function ::= FUNCTION IDENT '(' param_list_opt ')' ':' type BEGIN local_decls_opt stmt_list ret_stmt END ;
-procedure ::= PROCEDURE IDENT '(' param_list_opt ')' BEGIN local_decls_opt stmt_list END ;
+ident_list ::= IDENT 
+              | ident_list COMMA IDENT
+;
 
-// Bloque principal del programa
-main_block ::= BEGIN stmt_list END ;
-stmt_list ::= stmt_list stmt | stmt ;
-stmt ::= assign | call_stmt | if_stmt | while_stmt | for_stmt ;
+type ::= INT 
+        | REAL 
+        | CHAR 
+        | STRING 
+;
 
-// Asignación
-assign ::= IDENT ASSIGN expr ;
-call_stmt ::= IDENT '(' arg_list_opt ')' ;
+/* FUNCIONES */
+funcs_opt ::= 
+              | funcs_opt func_or_proc
+;
 
-// Expresiones
+func_or_proc ::= function 
+                | procedure 
+;
+
+function ::= FUNCTION IDENT LPAREN param_list_opt RPAREN COLON type SEMI
+             BEGIN local_decls_opt stmt_list END SEMI;
+
+procedure ::= PROCEDURE IDENT LPAREN param_list_opt RPAREN SEMI
+              BEGIN local_decls_opt stmt_list END SEMI;
+              
+local_decls_opt ::= 
+                    | VAR decl_list
+;
+
+/* MAIN */
+main_block ::= BEGIN stmt_list END;
+
+stmt_list ::= stmt
+            | stmt_list stmt
+;
+
+stmt ::= assign SEMI
+       | call_stmt SEMI
+       | if_stmt
+       | while_stmt
+       | for_stmt
+       | ret_stmt
+;
+
+assign ::= IDENT ASSIGN expr;
+
+call_stmt ::= IDENT LPAREN arg_list_opt RPAREN;
+
+arg_list_opt ::= 
+                | arg_list
+;
+
+arg_list ::= expr
+           | arg_list COMMA expr
+;
+
+/* EXPRESIONES */
 expr ::= expr PLUS expr
        | expr MINUS expr
        | expr TIMES expr
        | expr DIVIDE expr
-       | IDENT ;
+       | expr MOD expr
+       | expr DIV expr
+       | MINUS expr
+       | PLUS expr
+       | IDENT
+       | IDENT LPAREN arg_list_opt RPAREN
+       | INT_LIT
+       | REAL_LIT
+       | CHAR_LIT
+       | STRING_LIT
+       | LPAREN expr RPAREN
+       | INCR IDENT
+       | IDENT INCR
+       | DECR IDENT
+       | IDENT DECR
+;
 
-// Expresiones booleanas
+/* BOOLEANS */
 bool_expr ::= NOT bool_expr
             | bool_expr AND bool_expr
             | bool_expr OR bool_expr
@@ -53,26 +142,32 @@ bool_expr ::= NOT bool_expr
             | expr LT expr
             | expr LE expr
             | expr GT expr
-            | expr GE expr ;
+            | expr GE expr
+            | LPAREN bool_expr RPAREN
+;
 
-// Declaraciones de parámetros
-param_list_opt ::= /* vacío */ | param_list ;
-param_list ::= param_list ',' param | param ;
-param ::= IDENT ':' type ;
-ret_stmt ::= RETURN expr ;
+/* IF */
+if_stmt ::= IF bool_expr THEN stmt_list else_opt END SEMI;
 
-// Sentencias de control
-if_stmt ::= IF bool_expr THEN stmt_list else_opt END ;
-else_opt ::= ELSE stmt_list | /* vacío */ ;
-while_stmt ::= WHILE bool_expr DO stmt_list END ;
-for_stmt ::= FOR IDENT ASSIGN expr TO expr DO stmt_list END ;
+else_opt ::= 
+           | ELSE stmt_list
+;
 
-// Definir la acción semántica para las asignaciones
-assign_action ::= {
-    // Aquí se puede agregar lógica para manejar la semántica de asignaciones si es necesario
-};
+/* WHILE */
+while_stmt ::= WHILE bool_expr DO stmt_list END SEMI;
 
-// Definir las expresiones booleanas y la semántica asociada
-bool_expr_action ::= {
-    // Lógica para las expresiones booleanas si es necesario
-};
+/* FOR */
+for_stmt ::= FOR IDENT ASSIGN expr TO expr DO stmt_list END SEMI;
+
+/* PARAMS */
+param_list_opt ::= 
+                  | param_list
+;
+
+param_list ::= param
+             | param_list SEMI param
+;
+
+param ::= ident_list COLON type;
+
+ret_stmt ::= RETURN expr SEMI;
