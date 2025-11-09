@@ -12,13 +12,13 @@ parser code {:
 :}
 
 /* TERMINALES */
-terminal PROGRAM, VAR, FUNCTION, PROCEDURE, BEGIN, END;
+terminal PROGRAM, VAR, FUNCTION, PROCEDURE, BEGIN, END, RETURN;
 terminal IF, THEN, ELSE, WHILE, DO, FOR, TO, NOT, AND, OR;
 terminal PLUS, MINUS, TIMES, DIVIDE;
 terminal MOD_KW, DIV_KW;
 terminal EQ, NE, LT, GT, LE, GE, ASSIGN;
 terminal INT, REAL, CHAR, STRING;
-terminal LPAREN, RPAREN, COMMA, SEMI, COLON, DOT;
+terminal LPAREN, RPAREN, LBRACK, RBRACK, COMMA, SEMI, COLON, DOT;
 terminal INCR, DECR;
 terminal READ, WRITE;
 terminal String IDENT;
@@ -197,3 +197,5 @@ param_list ::= param
 ;
 
 param ::= ident_list COLON type;
+
+ret_stmt ::= RETURN expr SEMI;
