@@ -1,5 +1,6 @@
 import java_cup.runtime.*;
 
+
 parser code {: 
     public void report_error(String message, Object info) {
         System.err.println("Error sintactico: " + message);
@@ -17,7 +18,7 @@ terminal PLUS, MINUS, TIMES, DIVIDE;
 terminal MOD_KW, DIV_KW;
 terminal EQ, NE, LT, GT, LE, GE, ASSIGN;
 terminal INT, REAL, CHAR, STRING;
-terminal LPAREN, RPAREN, LBRACK, RBRACK, COMMA, SEMI, COLON, DOT;
+terminal LPAREN, RPAREN, COMMA, SEMI, COLON, DOT;
 terminal INCR, DECR;
 terminal READ, WRITE;
 terminal String IDENT;
@@ -28,11 +29,14 @@ non terminal program, globals_opt, decl_list, decl, type;
 non terminal funcs_opt, func_or_proc, function, procedure;
 non terminal main_block, stmt_list, stmt;
 non terminal assign, call_stmt, expr, bool_expr;
-non terminal param_list_opt, param_list, param, ret_stmt;
+non terminal param_list_opt, param_list, param;
 non terminal else_opt, while_stmt, for_stmt;
 non terminal ident_list, arg_list_opt, arg_list;
-non terminal local_decls_opt, if_stmt;
+non terminal if_stmt;
 non terminal read_stmt, write_stmt;
+non terminal block;
+non terminal decl_section;
+non terminal local_decl_list;
 
 /* PRECEDENCIAS */
 precedence left OR;
@@ -77,18 +81,32 @@ func_or_proc ::= function
 ;
 
 function ::= FUNCTION IDENT LPAREN param_list_opt RPAREN COLON type SEMI
-             BEGIN local_decls_opt stmt_list END SEMI;
+             BEGIN block END SEMI;
 
 procedure ::= PROCEDURE IDENT LPAREN param_list_opt RPAREN SEMI
-              BEGIN local_decls_opt stmt_list END SEMI;
+              BEGIN block END SEMI;
               
-local_decls_opt ::= 
-                    | VAR decl_list
-;
+
 
 /* MAIN */
-main_block ::= BEGIN stmt_list END;
+main_block ::= BEGIN block END;
 
+/* ================== BLOQUE ==================
+   bloque = [declaraciones locales] + sentencias
+   así CUP ya no confunde si el IDENT que sigue
+   es otra decl o una sentencia.
+*/
+
+block ::= decl_section stmt_list ;
+
+/* puede no haber VAR ... */
+decl_section ::=
+               /* vacío */
+             | VAR local_decl_list
+             ;
+
+
+/* Sentencias */
 stmt_list ::= stmt
             | stmt_list stmt
 ;
@@ -100,16 +118,14 @@ stmt ::= assign SEMI
        | if_stmt
        | while_stmt
        | for_stmt
-       | ret_stmt
 ;
 
-/* Sentencias */
 assign ::= IDENT ASSIGN expr;
 
 call_stmt ::= IDENT LPAREN arg_list_opt RPAREN;
 
-read_stmt ::= READ LPAREN arg_list_opt RPAREN
-            | READ LPAREN RPAREN
+read_stmt ::= READ LPAREN RPAREN
+            | READ LPAREN expr RPAREN
             ;
 
 write_stmt ::= WRITE LPAREN arg_list_opt RPAREN;
