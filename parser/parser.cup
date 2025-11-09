@@ -11,7 +11,7 @@ parser code {:
 :}
 
 /* TERMINALES */
-terminal PROGRAM, VAR, FUNCTION, PROCEDURE, BEGIN, END; //RETURN
+terminal PROGRAM, VAR, FUNCTION, PROCEDURE, BEGIN, END;
 terminal IF, THEN, ELSE, WHILE, DO, FOR, TO, NOT, AND, OR;
 terminal PLUS, MINUS, TIMES, DIVIDE;
 terminal MOD_KW, DIV_KW;
@@ -181,5 +181,3 @@ param_list ::= param
 ;
 
 param ::= ident_list COLON type;
-
-//ret_stmt ::= RETURN expr SEMI;
