@@ -11,9 +11,10 @@ parser code {:
 :}
 
 /* TERMINALES */
-terminal PROGRAM, VAR, FUNCTION, PROCEDURE, BEGIN, END, RETURN;
+terminal PROGRAM, VAR, FUNCTION, PROCEDURE, BEGIN, END; //RETURN
 terminal IF, THEN, ELSE, WHILE, DO, FOR, TO, NOT, AND, OR;
-terminal PLUS, MINUS, TIMES, DIVIDE, MOD, DIV;
+terminal PLUS, MINUS, TIMES, DIVIDE;
+terminal MOD_KW, DIV_KW;
 terminal EQ, NE, LT, GT, LE, GE, ASSIGN;
 terminal INT, REAL, CHAR, STRING;
 terminal LPAREN, RPAREN, LBRACK, RBRACK, COMMA, SEMI, COLON, DOT;
@@ -31,6 +32,7 @@ non terminal param_list_opt, param_list, param, ret_stmt;
 non terminal else_opt, while_stmt, for_stmt;
 non terminal ident_list, arg_list_opt, arg_list;
 non terminal local_decls_opt, if_stmt;
+non terminal read_stmt, write_stmt;
 
 /* PRECEDENCIAS */
 precedence left OR;
@@ -39,9 +41,9 @@ precedence left NOT;
 precedence left EQ, NE;
 precedence left LT, GT, LE, GE;
 precedence left PLUS, MINUS;
-precedence left TIMES, DIVIDE, MOD, DIV;
+precedence left TIMES, DIVIDE, MOD_KW, DIV_KW;
 
-/* PROGRAMA */
+/* ==============PROGRAMA============== */
 program ::= PROGRAM IDENT globals_opt funcs_opt main_block DOT;
 
 /* VARIABLES */
@@ -93,16 +95,26 @@ stmt_list ::= stmt
 
 stmt ::= assign SEMI
        | call_stmt SEMI
+       | read_stmt SEMI
+       | write_stmt SEMI
        | if_stmt
        | while_stmt
        | for_stmt
        | ret_stmt
 ;
 
+/* Sentencias */
 assign ::= IDENT ASSIGN expr;
 
 call_stmt ::= IDENT LPAREN arg_list_opt RPAREN;
 
+read_stmt ::= READ LPAREN arg_list_opt RPAREN
+            | READ LPAREN RPAREN
+            ;
+
+write_stmt ::= WRITE LPAREN arg_list_opt RPAREN;
+
+/* Argumentos */
 arg_list_opt ::= 
                 | arg_list
 ;
@@ -116,8 +128,8 @@ expr ::= expr PLUS expr
        | expr MINUS expr
        | expr TIMES expr
        | expr DIVIDE expr
-       | expr MOD expr
-       | expr DIV expr
+       | expr MOD_KW expr
+       | expr DIV_KW expr
        | MINUS expr
        | PLUS expr
        | IDENT
@@ -170,4 +182,4 @@ param_list ::= param
 
 param ::= ident_list COLON type;
 
-ret_stmt ::= RETURN expr SEMI;
+//ret_stmt ::= RETURN expr SEMI;
