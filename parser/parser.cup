@@ -167,7 +167,9 @@ stmt ::= assign SEMI
        | ret_stmt
 ;
 
-assign ::= IDENT ASSIGN expr;
+assign ::= IDENT ASSIGN expr
+         | IDENT ASSIGN bool_expr
+         ;
 
 call_stmt ::= IDENT LPAREN arg_list_opt RPAREN;
 
@@ -175,7 +177,7 @@ read_stmt ::= READ LPAREN RPAREN
             | READ LPAREN expr RPAREN
             ;
 
-write_stmt ::= WRITE LPAREN arg_list_opt RPAREN;
+write_stmt ::= WRITE LPAREN arg_list RPAREN;
 
 /* Argumentos */
 arg_list_opt ::= 
