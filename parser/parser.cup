@@ -16,6 +16,7 @@ terminal PROGRAM, VAR, FUNCTION, PROCEDURE, BEGIN, END, RETURN;
 terminal IF, THEN, ELSE, WHILE, DO, FOR, TO, NOT, AND, OR;
 terminal PLUS, MINUS, TIMES, DIVIDE;
 terminal MOD_KW, DIV_KW;
+terminal CARET;
 terminal EQ, NE, LT, GT, LE, GE, ASSIGN;
 terminal INT, REAL, CHAR, STRING;
 terminal LPAREN, RPAREN, LBRACK, RBRACK, COMMA, SEMI, COLON, DOT;
@@ -37,6 +38,7 @@ non terminal read_stmt, write_stmt;
 non terminal block;
 non terminal decl_section;
 non terminal local_decl_list;
+non terminal ret_stmt;
 
 /* PRECEDENCIAS */
 precedence left OR;
@@ -45,6 +47,8 @@ precedence left NOT;
 precedence left EQ, NE;
 precedence left LT, GT, LE, GE;
 precedence left PLUS, MINUS;
+precedence left LBRACK, RBRACK;
+precedence left CARET;
 precedence left TIMES, DIVIDE, MOD_KW, DIV_KW;
 
 /* ==============PROGRAMA============== */
@@ -118,6 +122,7 @@ stmt ::= assign SEMI
        | if_stmt
        | while_stmt
        | for_stmt
+       | ret_stmt
 ;
 
 assign ::= IDENT ASSIGN expr;
@@ -140,7 +145,9 @@ arg_list ::= expr
 ;
 
 /* EXPRESIONES */
-expr ::= expr PLUS expr
+expr ::= expr LBRACK expr RBRACK
+       | expr CARET expr
+       | expr PLUS expr
        | expr MINUS expr
        | expr TIMES expr
        | expr DIVIDE expr
