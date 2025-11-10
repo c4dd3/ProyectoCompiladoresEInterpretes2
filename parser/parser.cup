@@ -152,7 +152,12 @@ decl_section ::=
 /* Sentencias */
 stmt_list ::= stmt
             | stmt_list stmt
-;
+            | stmt_list error SEMI
+              {:
+                Symbol e = (Symbol)$2;
+                report_error("Sentencia invalida; recuperado en ';'", e);
+              :}
+            ;
 
 stmt ::= assign SEMI
        | call_stmt SEMI
@@ -161,8 +166,13 @@ stmt ::= assign SEMI
        | if_stmt
        | while_stmt
        | for_stmt
+       | error SEMI
+         {:
+           Symbol e = (Symbol)$1;
+           report_error("Sentencia invalida; recuperado", e);
+         :}
+       ;
        /* | ret_stmt */
-;
 
 assign ::= IDENT ASSIGN expr
          | IDENT ASSIGN bool_expr
@@ -223,16 +233,94 @@ bool_expr ::= NOT bool_expr
 ;
 
 /* IF */
-if_stmt ::= IF bool_expr THEN BEGIN block END
-          | IF bool_expr THEN BEGIN block END ELSE BEGIN block END
+if_stmt ::=
+    IF bool_expr THEN BEGIN stmt_list END SEMI
+  | IF bool_expr THEN BEGIN stmt_list END ELSE BEGIN stmt_list END SEMI
+
+  /* Error: falta THEN */
+  | IF bool_expr error BEGIN stmt_list END SEMI
+    {:
+      Symbol err = (Symbol)$3;
+      report_error("Falta THEN en IF; recuperado en BEGIN", err);
+    :}
+
+  /* Error: falta BEGIN después de THEN */
+  | IF bool_expr THEN error stmt_list END SEMI
+    {:
+      Symbol err = (Symbol)$4;
+      report_error("Falta BEGIN tras THEN; recuperado en END", err);
+    :}
+
+  /* Error: ELSE roto o mal escrito */
+  | IF bool_expr THEN BEGIN stmt_list END error BEGIN stmt_list END SEMI
+    {:
+      Symbol err = (Symbol)$6;
+      report_error("ELSE inválido; recuperado en siguiente BEGIN", err);
+    :}
+
+  /* Error: condición rota */
+  | IF error THEN BEGIN stmt_list END SEMI
+    {:
+      Symbol err = (Symbol)$2;
+      report_error("Condición inválida en IF; recuperado en THEN", err);
+    :}
+
+  /* Error: falta ';' final */
+  | IF bool_expr THEN BEGIN stmt_list END error
+    {:
+      Symbol err = (Symbol)$6;
+      report_error("Falta ';' al final del IF; recuperado", err);
+    :}
+
+  /* Error muy genérico para casos no contemplados */
+  | IF error error
+    {:
+      Symbol err = (Symbol)$2;
+      report_error("IF invalido; recuperado saltando hasta siguiente sentencia", err);
+    :}
 ;
 
+
 /* WHILE */
-while_stmt ::= WHILE bool_expr DO BEGIN stmt_list END;
+while_stmt ::=
+      WHILE bool_expr DO BEGIN stmt_list END SEMI
+
+    | WHILE error DO BEGIN stmt_list END SEMI
+        {:
+           java_cup.runtime.Symbol err = (java_cup.runtime.Symbol)$2;
+           report_error("Condicion invalida tras WHILE; recuperado en DO", err);
+        :}
+
+    | WHILE bool_expr DO error END SEMI
+        {:
+           java_cup.runtime.Symbol err = (java_cup.runtime.Symbol)$4;
+           report_error("Falta BEGIN tras DO; recuperado en END", err);
+        :}
+  ;
 
 /* FOR */
-for_stmt ::= FOR IDENT ASSIGN expr TO expr DO BEGIN stmt_list END;
+/* FOR con recuperaciones */
+for_stmt ::=
+      FOR IDENT ASSIGN expr TO expr DO BEGIN stmt_list END SEMI
 
+    | FOR IDENT ASSIGN error TO expr DO BEGIN stmt_list END SEMI
+        {:
+           java_cup.runtime.Symbol err = (java_cup.runtime.Symbol)$4;
+           report_error("exp1 invalida en FOR; recuperado en TO", err);
+        :}
+
+    | FOR IDENT ASSIGN expr TO error DO BEGIN stmt_list END SEMI
+        {:
+           java_cup.runtime.Symbol err = (java_cup.runtime.Symbol)$6;
+           report_error("exp2 invalida en FOR; recuperado en DO", err);
+        :}
+
+    | FOR IDENT ASSIGN expr TO expr DO error END SEMI
+        {:
+           java_cup.runtime.Symbol err = (java_cup.runtime.Symbol)$8;
+           report_error("Falta BEGIN tras DO; recuperado en END", err);
+        :}
+  ;
 /* PARAMS */
 param_list_opt ::= 
                   | param_list
