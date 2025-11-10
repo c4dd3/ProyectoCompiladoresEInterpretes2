@@ -2,53 +2,37 @@ import java_cup.runtime.*;
 
 
 parser code {:
-  /** Imprime errores con línea/columna y nombre simbólico del token **/
+  private String symToName(int id) {
+    try { for (java.lang.reflect.Field f : parser.sym.class.getFields()) if (f.getInt(null)==id) return f.getName(); }
+    catch (Exception ignore) {}
+    return String.valueOf(id);
+  }
+
+  private void addSyn(int line, int col, String msg, int tokenId, String ctx){
+    parser.SyntaxErrorCollector.add(line, col, msg, symToName(tokenId), ctx);
+  }
+
   @Override
   public void report_error(String message, Object info) {
-    java_cup.runtime.Symbol sym = (java_cup.runtime.Symbol) info;
-    System.err.println(
-      "[SYN] " + (sym.left+1) + ":" + (sym.right+1) +
-      " → " + message +
-      " ; token=" + symToName(sym.sym)
-    );
+    java_cup.runtime.Symbol s = (java_cup.runtime.Symbol) info;
+    addSyn(s.left+1, s.right+1, message, s.sym, "report_error");
   }
 
-  /** Error fatal (cuando CUP se rinde definitivamente) */
-  @Override
-  public void report_fatal_error(String message, Object info) {
-    report_error(message, info);
-    throw new RuntimeException("Can't recover from previous error(s)");
-  }
-
-  /** Error sintáctico puntual (más directo que report_error) */
   @Override
   public void syntax_error(java_cup.runtime.Symbol cur_token) {
-    System.err.println(
-      "[SYN] cerca de " + (cur_token.left+1) + ":" + (cur_token.right+1) +
-      " ; token=" + symToName(cur_token.sym)
-    );
+    addSyn(cur_token.left+1, cur_token.right+1, "Token inesperado", cur_token.sym, "syntax_error");
   }
 
-  /** Invocado cuando CUP no puede reparar y va a abortar el parse */
   @Override
-  public void unrecovered_syntax_error(java_cup.runtime.Symbol cur_token)
-      throws java.lang.Exception {
-    System.err.println(
-      "[ABORT] no se pudo recuperar en " +
-      (cur_token.left+1) + ":" + (cur_token.right+1) +
-      " ; token=" + symToName(cur_token.sym)
-    );
-    super.unrecovered_syntax_error(cur_token); // lanza la excepción de CUP
+  public void report_fatal_error(String message, Object info) {
+    java_cup.runtime.Symbol s = (java_cup.runtime.Symbol) info;
+    addSyn(s.left+1, s.right+1, "Fatal: "+message, s.sym, "fatal");
+    // NO lanzamos excepción aquí; dejamos que CUP intente recuperar.
   }
 
-  /** Convierte el id numérico del token en su nombre de sym.java (p. ej. ASSIGN, PROGRAM, IDENT) */
-  private String symToName(int id) {
-    try {
-      for (java.lang.reflect.Field f : parser.sym.class.getFields()) {
-        if (f.getInt(null) == id) return f.getName();
-      }
-    } catch (Exception ignore) {}
-    return String.valueOf(id);
+  @Override
+  public void unrecovered_syntax_error(java_cup.runtime.Symbol cur_token) throws java.lang.Exception {
+    addSyn(cur_token.left+1, cur_token.right+1, "No se pudo recuperar", cur_token.sym, "abort");
   }
 :};
 
@@ -164,7 +148,7 @@ stmt ::= assign SEMI
        | if_stmt
        | while_stmt
        | for_stmt
-       | ret_stmt
+       /* | ret_stmt */
 ;
 
 assign ::= IDENT ASSIGN expr
