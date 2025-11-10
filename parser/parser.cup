@@ -1,15 +1,57 @@
 import java_cup.runtime.*;
 
 
-parser code {: 
-    public void report_error(String message, Object info) {
-        System.err.println("Error sintactico: " + message);
-    }
-    
-    public void syntax_error(Symbol cur_token) {
-        report_error("Syntax error", cur_token);
-    }
-:}
+parser code {:
+  /** Imprime errores con línea/columna y nombre simbólico del token **/
+  @Override
+  public void report_error(String message, Object info) {
+    java_cup.runtime.Symbol sym = (java_cup.runtime.Symbol) info;
+    System.err.println(
+      "[SYN] " + (sym.left+1) + ":" + (sym.right+1) +
+      " → " + message +
+      " ; token=" + symToName(sym.sym)
+    );
+  }
+
+  /** Error fatal (cuando CUP se rinde definitivamente) */
+  @Override
+  public void report_fatal_error(String message, Object info) {
+    report_error(message, info);
+    throw new RuntimeException("Can't recover from previous error(s)");
+  }
+
+  /** Error sintáctico puntual (más directo que report_error) */
+  @Override
+  public void syntax_error(java_cup.runtime.Symbol cur_token) {
+    System.err.println(
+      "[SYN] cerca de " + (cur_token.left+1) + ":" + (cur_token.right+1) +
+      " ; token=" + symToName(cur_token.sym)
+    );
+  }
+
+  /** Invocado cuando CUP no puede reparar y va a abortar el parse */
+  @Override
+  public void unrecovered_syntax_error(java_cup.runtime.Symbol cur_token)
+      throws java.lang.Exception {
+    System.err.println(
+      "[ABORT] no se pudo recuperar en " +
+      (cur_token.left+1) + ":" + (cur_token.right+1) +
+      " ; token=" + symToName(cur_token.sym)
+    );
+    super.unrecovered_syntax_error(cur_token); // lanza la excepción de CUP
+  }
+
+  /** Convierte el id numérico del token en su nombre de sym.java (p. ej. ASSIGN, PROGRAM, IDENT) */
+  private String symToName(int id) {
+    try {
+      for (java.lang.reflect.Field f : parser.sym.class.getFields()) {
+        if (f.getInt(null) == id) return f.getName();
+      }
+    } catch (Exception ignore) {}
+    return String.valueOf(id);
+  }
+:};
+
 
 /* TERMINALES */
 terminal PROGRAM, VAR, FUNCTION, PROCEDURE, BEGIN, END, RETURN;
@@ -31,7 +73,7 @@ non terminal funcs_opt, func_or_proc, function, procedure;
 non terminal main_block, stmt_list, stmt;
 non terminal assign, call_stmt, expr, bool_expr;
 non terminal param_list_opt, param_list, param;
-non terminal else_opt, while_stmt, for_stmt;
+non terminal while_stmt, for_stmt;
 non terminal ident_list, arg_list_opt, arg_list;
 non terminal if_stmt;
 non terminal read_stmt, write_stmt;
@@ -50,6 +92,7 @@ precedence left PLUS, MINUS;
 precedence left LBRACK, RBRACK;
 precedence left CARET;
 precedence left TIMES, DIVIDE, MOD_KW, DIV_KW;
+
 
 /* ==============PROGRAMA============== */
 program ::= PROGRAM IDENT globals_opt funcs_opt main_block DOT;
@@ -84,7 +127,7 @@ func_or_proc ::= function
                 | procedure 
 ;
 
-function ::= FUNCTION IDENT LPAREN param_list_opt RPAREN COLON type SEMI
+function ::= FUNCTION IDENT LPAREN param_list_opt RPAREN COLON type
              BEGIN block END SEMI;
 
 procedure ::= PROCEDURE IDENT LPAREN param_list_opt RPAREN SEMI
@@ -105,7 +148,6 @@ block ::= decl_section stmt_list ;
 
 /* puede no haber VAR ... */
 decl_section ::=
-               /* vacío */
              | VAR local_decl_list
              ;
 
@@ -182,17 +224,15 @@ bool_expr ::= NOT bool_expr
 ;
 
 /* IF */
-if_stmt ::= IF bool_expr THEN stmt_list else_opt END SEMI;
-
-else_opt ::= 
-           | ELSE stmt_list
+if_stmt ::= IF bool_expr THEN BEGIN block END
+          | IF bool_expr THEN BEGIN block END ELSE BEGIN block END
 ;
 
 /* WHILE */
-while_stmt ::= WHILE bool_expr DO stmt_list END SEMI;
+while_stmt ::= WHILE bool_expr DO BEGIN stmt_list END;
 
 /* FOR */
-for_stmt ::= FOR IDENT ASSIGN expr TO expr DO stmt_list END SEMI;
+for_stmt ::= FOR IDENT ASSIGN expr TO expr DO BEGIN stmt_list END;
 
 /* PARAMS */
 param_list_opt ::= 

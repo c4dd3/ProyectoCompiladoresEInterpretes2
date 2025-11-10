@@ -7,7 +7,7 @@ public class MainParser {
 
     public static void run() throws Exception {
         // Crear el scanner
-        scanner.Scanner sc = new scanner.Scanner(new FileReader("testFile.abs"));
+        scanner.Scanner sc = new scanner.Scanner(new FileReader("parser/testFile.abs"));
         
         // Crear el parser
         parser.Parser p = new parser.Parser(sc);
