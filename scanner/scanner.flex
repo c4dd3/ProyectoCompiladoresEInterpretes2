@@ -201,6 +201,7 @@ RES_P1_EXTRA = ABSOLUTE|ARRAY|ASM|CASE|CONST|CONSTRUCTOR|DESTRUCTOR|EXTERNAL|DOW
 "<=" { TokenCollector.add("OPERADOR", yytext(), yyline+1); return sym(sym.LE); }
 "<>" { TokenCollector.add("OPERADOR", yytext(), yyline+1); return sym(sym.NE); }
 
+"^"  { TokenCollector.add("OPERADOR", yytext(), yyline+1); return sym(sym.CARET); }
 "+"  { TokenCollector.add("OPERADOR", yytext(), yyline+1); return sym(sym.PLUS); }
 "-"  { TokenCollector.add("OPERADOR", yytext(), yyline+1); return sym(sym.MINUS); }
 "*"  { TokenCollector.add("OPERADOR", yytext(), yyline+1); return sym(sym.TIMES); }
