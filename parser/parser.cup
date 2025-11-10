@@ -90,7 +90,12 @@ decl_list ::= decl
             | decl_list decl
 ;
 
-decl ::= ident_list COLON type SEMI;
+decl ::= ident_list COLON type SEMI
+      | ident_list COLON error SEMI
+      {: addSyn(((Symbol)$3).left+1, ((Symbol)$3).right+1,
+                  "Tipo invalido en declaracion; recuperado en ';'",
+                      ((Symbol)$3).sym, "decl"); :}
+;
 
 ident_list ::= IDENT 
               | ident_list COMMA IDENT
@@ -128,12 +133,20 @@ main_block ::= BEGIN block END;
    es otra decl o una sentencia.
 */
 
-block ::= decl_section stmt_list ;
+block ::= decl_section stmt_list
+        | decl_section error   /* consume hasta END de quien invoca */
+      {: addSyn(((Symbol)$2).left+1, ((Symbol)$2).right+1,
+                  "Bloque invalido; recuperado en END", ((Symbol)$2).sym, "block"); :}
+;
 
 /* puede no haber VAR ... */
 decl_section ::=
              | VAR local_decl_list
-             ;
+             | VAR error SEMI
+             {: addSyn(((Symbol)$2).left+1, ((Symbol)$2).right+1,
+                 "Declaracion local invalida; recuperado en ';'",
+                 ((Symbol)$2).sym, "decl-section"); :}
+;
 
 
 /* Sentencias */
