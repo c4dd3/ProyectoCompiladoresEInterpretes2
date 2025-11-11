@@ -82,6 +82,9 @@ precedence left TIMES, DIVIDE, MOD_KW, DIV_KW;
 program ::= PROGRAM IDENT globals_opt funcs_opt main_block DOT;
 
 /* VARIABLES */
+
+local_decl_list ::= decl_list;
+
 globals_opt ::= 
                 | VAR decl_list
 ;
