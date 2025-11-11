@@ -161,13 +161,12 @@ stmt ::= assign SEMI
        | while_stmt
        | for_stmt
        | error SEMI
-       | ret_stmt
          {:
            Symbol e = (Symbol)$1;
            report_error("Sentencia invalida; recuperado", e);
          :}
+       | ret_stmt
        ;
-       
 
 assign ::= IDENT ASSIGN expr
          | IDENT ASSIGN bool_expr
