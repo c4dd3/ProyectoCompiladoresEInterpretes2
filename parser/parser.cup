@@ -299,12 +299,22 @@ if_stmt ::=
     IF bool_expr THEN BEGIN stmt_list END SEMI
   | IF bool_expr THEN BEGIN stmt_list END ELSE BEGIN stmt_list END SEMI
 
-  | IF bool_expr error BEGIN stmt_list END SEMI
+  | IF bool_expr BEGIN stmt_list END SEMI
     {:
+      java_cup.runtime.Symbol t = parser.cur_token;
+      report_error("Falta THEN en IF; asumido", t);
+    :}
+  | IF bool_expr BEGIN stmt_list END ELSE BEGIN stmt_list END SEMI
+    {:
+      java_cup.runtime.Symbol t = parser.cur_token;
+      report_error("Falta THEN en IF; asumido", t);
+    :}
+
+  | IF bool_expr error BEGIN stmt_list END SEMI
+     {:
       java_cup.runtime.Symbol t = parser.cur_token;
       report_error("Falta THEN en IF; recuperado en BEGIN", t);
     :}
-
   | IF bool_expr THEN error stmt_list END SEMI
     {:
       java_cup.runtime.Symbol t = parser.cur_token;
