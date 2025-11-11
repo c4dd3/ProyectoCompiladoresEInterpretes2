@@ -1,42 +1,5 @@
 package parser;
 
-import java.io.FileReader;
-import java.io.File;
-
-import scanner.Scanner;
-
-public class MainParser {
-
-    public static void run(String sourcePath) throws Exception {
-        SyntaxErrorCollector.reset();
-
-        try (FileReader fr = new FileReader(new File(sourcePath))) {
-            Scanner sc = new Scanner(fr);
-            Parser p = new Parser(sc);
-            p.parse();
-        }
-        System.out.println();
-        SyntaxErrorCollector.print();
-    }
-
-    public static void main(String[] args) {
-        try {
-            String path;
-            if (args != null && args.length > 0)
-                path = args[0];
-            else
-                path = "parser/testFile.abs";  
-
-            run(path);
-        } catch (Exception e) {
-            System.err.println("Error en el análisis sintáctico: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-}
-
-package parser;
-
 import java.io.BufferedReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -65,7 +28,7 @@ public class MainParser {
             try {
                 p.parse(); 
             } catch (Exception ex) {
-                System.err.println("[ABORT] CUP lanzó excepción: " + ex.getMessage());
+                System.err.println("[ABORT] CUP con excepcion: " + ex.getMessage());
                 // seguimos para imprimir reportes
             }
 
@@ -84,7 +47,7 @@ public class MainParser {
         TokenCollector.printErrors();  // detalle de errores léxicos
         System.out.println();
         SyntaxErrorCollector.print();  // detalle de errores sintácticos
-        System.out.println("=== Fin del análisis P2 ===");
+        System.out.println("=== Fin del analisis P2 ===");
     }
 
     public static void main(String[] args) {

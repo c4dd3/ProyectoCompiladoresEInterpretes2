@@ -28,7 +28,7 @@ public class ProyectoCompi2 {
         System.out.println("=== Proyecto Compiladores e Intérpretes - Etapa 2 ===");
         System.out.println("1) Probar SCANNER (P1)");
         System.out.println("2) Probar PARSER (P2)");
-        System.out.print("Opción: ");
+        System.out.print("Opcion: ");
         int op = in.nextInt();
         in.nextLine(); // limpiar
 
@@ -54,7 +54,7 @@ public class ProyectoCompi2 {
                 break;
 
             default:
-                System.out.println("Opción inválida.");
+                System.out.println("Opcion invalida.");
         }
     }
 }
