@@ -63,7 +63,6 @@ non terminal if_stmt;
 non terminal read_stmt, write_stmt;
 non terminal block;
 non terminal decl_section;
-non terminal local_decl_list;
 non terminal ret_stmt;
 
 /* PRECEDENCIAS */
@@ -82,8 +81,6 @@ precedence left TIMES, DIVIDE, MOD_KW, DIV_KW;
 program ::= PROGRAM IDENT globals_opt funcs_opt main_block DOT;
 
 /* VARIABLES */
-
-local_decl_list ::= decl_list;
 
 globals_opt ::= 
                 | VAR decl_list
@@ -144,22 +141,16 @@ block ::= decl_section stmt_list
 
 /* puede no haber VAR ... */
 decl_section ::=
-             | VAR local_decl_list
-             | VAR error SEMI
+           | VAR decl_list
+           | VAR error SEMI
              {: addSyn(((Symbol)$2).left+1, ((Symbol)$2).right+1,
                  "Declaracion local invalida; recuperado en ';'",
                  ((Symbol)$2).sym, "decl-section"); :}
 ;
 
-
 /* Sentencias */
 stmt_list ::= stmt
             | stmt_list stmt
-            | stmt_list error SEMI
-              {:
-                Symbol e = (Symbol)$2;
-                report_error("Sentencia invalida; recuperado en ';'", e);
-              :}
             ;
 
 stmt ::= assign SEMI
@@ -170,12 +161,13 @@ stmt ::= assign SEMI
        | while_stmt
        | for_stmt
        | error SEMI
+       | ret_stmt
          {:
            Symbol e = (Symbol)$1;
            report_error("Sentencia invalida; recuperado", e);
          :}
        ;
-       /* | ret_stmt */
+       
 
 assign ::= IDENT ASSIGN expr
          | IDENT ASSIGN bool_expr
