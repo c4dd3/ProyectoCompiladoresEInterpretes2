@@ -89,6 +89,11 @@ program ::=
       java_cup.runtime.Symbol t = parser.cur_token;
       report_error("Falta '.' al final del programa; recuperado", t);
     :}
+  | PROGRAM IDENT globals_opt funcs_opt main_block
+    {:
+      java_cup.runtime.Symbol t = parser.cur_token;
+      report_error("Falta '.' al final del programa; recuperado en EOF", t);
+    :}
   | error main_block DOT
     {:
       java_cup.runtime.Symbol t = parser.cur_token;
