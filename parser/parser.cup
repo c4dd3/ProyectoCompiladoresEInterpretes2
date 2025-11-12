@@ -224,7 +224,18 @@ read_stmt ::= READ LPAREN RPAREN
             | READ LPAREN expr RPAREN
 ;
 
-write_stmt ::= WRITE LPAREN arg_list RPAREN;
+write_stmt ::= WRITE LPAREN arg_list RPAREN
+             | WRITE LPAREN arg_list COMMA RPAREN
+               {:
+                 java_cup.runtime.Symbol t = parser.cur_token;
+                 report_error("Argumento faltante antes de ')'; recuperado", t);
+               :}
+             | WRITE LPAREN error RPAREN
+               {:
+                 java_cup.runtime.Symbol t = parser.cur_token;
+                 report_error("Lista de argumentos invalida; recuperado en ')'", t);
+               :}
+;
 
 
 /* ===================== ARGUMENTOS/PARAMETROS ===================== */
@@ -240,6 +251,11 @@ arg_list_opt ::=
 
 arg_list ::= expr
            | arg_list COMMA expr
+           | arg_list COMMA error
+             {:
+               java_cup.runtime.Symbol t = parser.cur_token;
+               report_error("Argumento faltante tras ','; recuperado", t);
+             :}
 ;
 
 param_list_opt ::=
