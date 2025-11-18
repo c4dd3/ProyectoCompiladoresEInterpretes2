@@ -271,7 +271,7 @@ param_list ::= param
              | param_list SEMI param
 ;
 
-param ::= ident_list type;
+param ::= type ident_list;
 
 
 /* ===================== EXPRESIONES ===================== */
