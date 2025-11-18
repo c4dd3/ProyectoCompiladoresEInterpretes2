@@ -268,7 +268,7 @@ param_list_opt ::=
 ;
 
 param_list ::= param
-             | param_list SEMI param
+             | param_list COMMA param
 ;
 
 param ::= type ident_list;
