@@ -156,11 +156,13 @@ func_or_proc ::= function
 ;
 
 function ::= FUNCTION IDENT LPAREN param_list_opt RPAREN COLON type
-             BEGIN block END SEMI
+             BEGIN block END
+           | FUNCTION IDENT LPAREN param_list_opt RPAREN
+             BEGIN block END
 ;
 
-procedure ::= PROCEDURE IDENT LPAREN param_list_opt RPAREN SEMI
-              BEGIN block END SEMI
+procedure ::= PROCEDURE IDENT LPAREN param_list_opt RPAREN 
+              BEGIN block END
 ;
 
 
@@ -317,38 +319,38 @@ bool_expr ::= NOT bool_expr
 
 /* ===================== CONTROL DE FLUJO ===================== */
 if_stmt ::=
-    IF bool_expr THEN BEGIN stmt_list END SEMI
-  | IF bool_expr THEN BEGIN stmt_list END ELSE BEGIN stmt_list END SEMI
+    IF bool_expr THEN BEGIN stmt_list END
+  | IF bool_expr THEN BEGIN stmt_list END ELSE BEGIN stmt_list END
 
-  | IF bool_expr BEGIN stmt_list END SEMI
+  | IF bool_expr BEGIN stmt_list END
     {:
       java_cup.runtime.Symbol t = parser.cur_token;
       report_error("Falta THEN en IF; asumido", t);
     :}
-  | IF bool_expr BEGIN stmt_list END ELSE BEGIN stmt_list END SEMI
+  | IF bool_expr BEGIN stmt_list END ELSE BEGIN stmt_list END
     {:
       java_cup.runtime.Symbol t = parser.cur_token;
       report_error("Falta THEN en IF; asumido", t);
     :}
 
-  | IF bool_expr error BEGIN stmt_list END SEMI
+  | IF bool_expr error BEGIN stmt_list END
      {:
       java_cup.runtime.Symbol t = parser.cur_token;
       report_error("Falta THEN en IF; recuperado en BEGIN", t);
     :}
-  | IF bool_expr THEN error stmt_list END SEMI
+  | IF bool_expr THEN error stmt_list END
     {:
       java_cup.runtime.Symbol t = parser.cur_token;
       report_error("Falta BEGIN tras THEN; recuperado en END", t);
     :}
 
-  | IF bool_expr THEN BEGIN stmt_list END error BEGIN stmt_list END SEMI
+  | IF bool_expr THEN BEGIN stmt_list END error BEGIN stmt_list END
     {:
       java_cup.runtime.Symbol t = parser.cur_token;
       report_error("ELSE invalido; recuperado en siguiente BEGIN", t);
     :}
 
-  | IF error THEN BEGIN stmt_list END SEMI
+  | IF error THEN BEGIN stmt_list END
     {:
       java_cup.runtime.Symbol t = parser.cur_token;
       report_error("Condicion invalida en IF; recuperado en THEN", t);
@@ -368,15 +370,15 @@ if_stmt ::=
 ;
 
 while_stmt ::=
-    WHILE bool_expr DO BEGIN stmt_list END SEMI
+    WHILE bool_expr DO BEGIN stmt_list END
 
-  | WHILE error DO BEGIN stmt_list END SEMI
+  | WHILE error DO BEGIN stmt_list END
     {:
       java_cup.runtime.Symbol t = parser.cur_token;
       report_error("Condicion invalida tras WHILE; recuperado en DO", t);
     :}
 
-  | WHILE bool_expr DO error END SEMI
+  | WHILE bool_expr DO error END
     {:
       java_cup.runtime.Symbol t = parser.cur_token;
       report_error("Falta BEGIN tras DO; recuperado en END", t);
@@ -390,21 +392,21 @@ while_stmt ::=
 ;
 
 for_stmt ::=
-    FOR IDENT ASSIGN expr TO expr DO BEGIN stmt_list END SEMI
+    FOR IDENT ASSIGN expr TO expr DO BEGIN stmt_list END
 
-  | FOR IDENT ASSIGN error TO expr DO BEGIN stmt_list END SEMI
+  | FOR IDENT ASSIGN error TO expr DO BEGIN stmt_list END
     {:
       java_cup.runtime.Symbol t = parser.cur_token;
       report_error("exp1 invalida en FOR; recuperado en TO", t);
     :}
 
-  | FOR IDENT ASSIGN expr TO error DO BEGIN stmt_list END SEMI
+  | FOR IDENT ASSIGN expr TO error DO BEGIN stmt_list END
     {:
       java_cup.runtime.Symbol t = parser.cur_token;
       report_error("exp2 invalida en FOR; recuperado en DO", t);
     :}
 
-  | FOR IDENT ASSIGN expr TO expr DO error END SEMI
+  | FOR IDENT ASSIGN expr TO expr DO error END
     {:
       java_cup.runtime.Symbol t = parser.cur_token;
       report_error("Falta BEGIN tras DO; recuperado en END", t);
