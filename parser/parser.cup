@@ -83,18 +83,8 @@ precedence left TIMES, DIVIDE, MOD_KW, DIV_KW;
 
 /* ===================== PROGRAMA ===================== */
 program ::=
-    PROGRAM IDENT globals_opt funcs_opt main_block DOT
-  | PROGRAM IDENT globals_opt funcs_opt main_block error
-    {:
-      java_cup.runtime.Symbol t = parser.cur_token;
-      report_error("Falta '.' al final del programa; recuperado", t);
-    :}
-  | PROGRAM IDENT globals_opt funcs_opt main_block
-    {:
-      java_cup.runtime.Symbol t = parser.cur_token;
-      report_error("Falta '.' al final del programa; recuperado en EOF", t);
-    :}
-  | error main_block DOT
+    PROGRAM IDENT globals_opt funcs_opt main_block
+  | error main_block
     {:
       java_cup.runtime.Symbol t = parser.cur_token;
       report_error("Cabecera de programa invalida; recuperado en main", t);
@@ -112,19 +102,21 @@ decl_list ::= decl
             | decl_list decl
 ;
 
-decl ::= type ident_list SEMI
-       | type error SEMI     /* error en identificadores */
+decl ::= ident_list COLON type SEMI
+       /* tipo inválido */
+       | ident_list COLON error SEMI
          {:
            java_cup.runtime.Symbol t = parser.cur_token;
            addSyn(t.left+1, t.right+1,
-                  "Identificador inválido en declaración; recuperado en ';'",
+                  "Tipo inválido en declaración; recuperado en ';'",
                   t.sym, "decl");
          :}
-       | error ident_list SEMI   /* error en tipo */
+       /* falta ':' entre la lista de idents y el tipo */
+       | ident_list error type SEMI
          {:
            java_cup.runtime.Symbol t = parser.cur_token;
            addSyn(t.left+1, t.right+1,
-                  "Tipo inválido en declaración; recuperado en lista de identificadores",
+                  "Falta ':' en declaración; recuperado en tipo",
                   t.sym, "decl");
          :}
 ;
@@ -356,12 +348,6 @@ if_stmt ::=
       report_error("Condicion invalida en IF; recuperado en THEN", t);
     :}
 
-  | IF bool_expr THEN BEGIN stmt_list END error
-    {:
-      java_cup.runtime.Symbol t = parser.cur_token;
-      report_error("Falta ';' al final del IF; recuperado", t);
-    :}
-
   | IF error error
     {:
       java_cup.runtime.Symbol t = parser.cur_token;
@@ -382,12 +368,6 @@ while_stmt ::=
     {:
       java_cup.runtime.Symbol t = parser.cur_token;
       report_error("Falta BEGIN tras DO; recuperado en END", t);
-    :}
-
-  | WHILE bool_expr DO BEGIN stmt_list END error
-    {:
-      java_cup.runtime.Symbol t = parser.cur_token;
-      report_error("Falta ';' al final del WHILE; recuperado", t);
     :}
 ;
 
@@ -410,12 +390,6 @@ for_stmt ::=
     {:
       java_cup.runtime.Symbol t = parser.cur_token;
       report_error("Falta BEGIN tras DO; recuperado en END", t);
-    :}
-
-  | FOR IDENT ASSIGN expr TO expr DO BEGIN stmt_list END error
-    {:
-      java_cup.runtime.Symbol t = parser.cur_token;
-      report_error("Falta ';' al final del FOR; recuperado", t);
     :}
 ;
 
