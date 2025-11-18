@@ -112,19 +112,19 @@ decl_list ::= decl
             | decl_list decl
 ;
 
-decl ::= ident_list COLON type SEMI
-       | ident_list COLON error SEMI
+decl ::= type ident_list SEMI
+       | type error SEMI     /* error en identificadores */
          {:
            java_cup.runtime.Symbol t = parser.cur_token;
            addSyn(t.left+1, t.right+1,
-                  "Tipo invalido en declaracion; recuperado en ';'",
+                  "Identificador inválido en declaración; recuperado en ';'",
                   t.sym, "decl");
          :}
-       | ident_list error type SEMI   /* falta ':' */
+       | error ident_list SEMI   /* error en tipo */
          {:
            java_cup.runtime.Symbol t = parser.cur_token;
            addSyn(t.left+1, t.right+1,
-                  "Falta ':' en declaracion; recuperado en tipo",
+                  "Tipo inválido en declaración; recuperado en lista de identificadores",
                   t.sym, "decl");
          :}
 ;
