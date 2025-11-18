@@ -271,7 +271,7 @@ param_list ::= param
              | param_list COMMA param
 ;
 
-param ::= type ident_list;
+param ::= type IDENT;
 
 
 /* ===================== EXPRESIONES ===================== */
